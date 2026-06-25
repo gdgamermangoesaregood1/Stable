@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAV</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <section id="introPanel" class="intro-panel">
+          <div class="eyebrow">RAV</div>
+          <h1 class="hero-title">AI desktop assistant</h1>
+          <p class="hero-copy">Your chat opens in focus mode after the first message.</p>
+        </section>
+
+        <section class="chat-zone">
+          <aside class="sidebar">
+            <div class="logo">RAV</div>
+            <div class="subtitle">AI desktop assistant</div>
+
+            <button id="newChatButton" class="new-chat-button" type="button">+ New Chat</button>
+
+            <input
+              id="searchBox"
+              class="search-box"
+              type="text"
+              placeholder="Search chats"
+              aria-label="Search chats"
+              autocomplete="off"
+            />
+
+            <div id="chatList" class="chat-list" aria-label="Chat list"></div>
+          </aside>
+
+          <section class="content">
+            <header class="header">
+              <div>
+                <div id="chatTitle" class="title">New Chat</div>
+                <div class="small-label">First message becomes the chat name</div>
+              </div>
+              <div id="statusPill" class="status">Online</div>
+            </header>
+
+            <section id="messages" class="chat-area" aria-live="polite"></section>
+
+            <form id="chatForm" class="input-area">
+              <textarea
+                id="promptInput"
+                rows="2"
+                placeholder="Type your message..."
+                autocomplete="off"
+              ></textarea>
+              <button id="sendButton" class="send-button" type="submit">Send</button>
+            </form>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <template id="messageTemplate">
+      <article class="message-row">
+        <div class="message-bubble">
+          <div class="message-role"></div>
+          <div class="message-text"></div>
+          <div class="message-time"></div>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

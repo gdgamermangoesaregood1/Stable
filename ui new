@@ -1,0 +1,378 @@
+import customtkinter as ctk
+from datetime import datetime
+
+ctk.set_appearance_mode("dark")
+
+
+ACCENT = "#1E90FF"
+ACCENT_HOVER = "#1874CD"
+BG = "#09090B"
+SIDEBAR = "#111113"
+PANEL = "#18181B"
+CARD = "#27272A"
+TEXT = "#FFFFFF"
+MUTED = "#A1A1AA"
+
+
+class RAVChatbot(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("RAV")
+        self.geometry("1180x740")
+        self.minsize(950, 620)
+        self.configure(fg_color=BG)
+
+        self.chats = {"New Chat": []}
+        self.current_chat = "New Chat"
+        self.chat_counter = 1
+
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+
+        self.build_sidebar()
+        self.build_header()
+        self.build_chat_area()
+        self.build_input_area()
+
+        self.refresh_sidebar()
+        self.show_welcome_message()
+
+    def build_sidebar(self):
+        self.sidebar = ctk.CTkFrame(self, width=280, fg_color=SIDEBAR, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, rowspan=3, sticky="ns")
+        self.sidebar.grid_propagate(False)
+
+        self.logo = ctk.CTkLabel(
+            self.sidebar,
+            text="RAV",
+            font=("Segoe UI", 36, "bold"),
+            text_color=ACCENT
+        )
+        self.logo.pack(padx=24, pady=(30, 0), anchor="w")
+
+        self.subtitle = ctk.CTkLabel(
+            self.sidebar,
+            text="AI desktop assistant",
+            font=("Segoe UI", 13),
+            text_color=MUTED
+        )
+        self.subtitle.pack(padx=26, pady=(2, 24), anchor="w")
+
+        self.new_chat_button = ctk.CTkButton(
+            self.sidebar,
+            text="+ New Chat",
+            height=48,
+            corner_radius=16,
+            font=("Segoe UI", 15, "bold"),
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
+            text_color=TEXT,
+            command=self.create_new_chat
+        )
+        self.new_chat_button.pack(padx=18, pady=(0, 16), fill="x")
+
+        self.search_box = ctk.CTkEntry(
+            self.sidebar,
+            placeholder_text="Search chats",
+            height=42,
+            corner_radius=14,
+            fg_color=PANEL,
+            border_width=0,
+            text_color=TEXT,
+            placeholder_text_color="#71717A"
+        )
+        self.search_box.pack(padx=18, pady=(0, 18), fill="x")
+        self.search_box.bind("<KeyRelease>", self.search_chats)
+
+        self.chat_list = ctk.CTkScrollableFrame(
+            self.sidebar,
+            fg_color=SIDEBAR,
+            corner_radius=0
+        )
+        self.chat_list.pack(padx=12, pady=0, fill="both", expand=True)
+
+    def build_header(self):
+        self.header = ctk.CTkFrame(self, height=88, fg_color=BG, corner_radius=0)
+        self.header.grid(row=0, column=1, sticky="ew")
+        self.header.grid_columnconfigure(0, weight=1)
+
+        self.title_label = ctk.CTkLabel(
+            self.header,
+            text=self.current_chat,
+            font=("Segoe UI", 28, "bold"),
+            text_color=TEXT
+        )
+        self.title_label.grid(row=0, column=0, padx=32, pady=(22, 0), sticky="w")
+
+        self.small_label = ctk.CTkLabel(
+            self.header,
+            text="First message becomes the chat name",
+            font=("Segoe UI", 13),
+            text_color=MUTED
+        )
+        self.small_label.grid(row=1, column=0, padx=34, pady=(0, 14), sticky="w")
+
+        self.status = ctk.CTkLabel(
+            self.header,
+            text="Online",
+            font=("Segoe UI", 13, "bold"),
+            text_color=ACCENT
+        )
+        self.status.grid(row=0, column=1, rowspan=2, padx=32, pady=24, sticky="e")
+
+    def build_chat_area(self):
+        self.chat_area = ctk.CTkScrollableFrame(
+            self,
+            corner_radius=28,
+            fg_color=PANEL
+        )
+        self.chat_area.grid(row=1, column=1, padx=28, pady=14, sticky="nsew")
+        self.chat_area.grid_columnconfigure(0, weight=1)
+
+    def build_input_area(self):
+        self.input_frame = ctk.CTkFrame(
+            self,
+            height=96,
+            corner_radius=28,
+            fg_color=PANEL
+        )
+        self.input_frame.grid(row=2, column=1, padx=28, pady=(0, 28), sticky="ew")
+        self.input_frame.grid_columnconfigure(0, weight=1)
+
+        self.entry = ctk.CTkTextbox(
+            self.input_frame,
+            height=54,
+            font=("Segoe UI", 15),
+            corner_radius=20,
+            border_width=0,
+            fg_color=CARD,
+            text_color=TEXT
+        )
+        self.entry.grid(row=0, column=0, padx=(18, 12), pady=21, sticky="ew")
+        self.entry.bind("<Return>", self.handle_enter)
+
+        self.send_button = ctk.CTkButton(
+            self.input_frame,
+            text="Send",
+            width=96,
+            height=54,
+            corner_radius=20,
+            font=("Segoe UI", 15, "bold"),
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
+            text_color=TEXT,
+            command=self.send_message
+        )
+        self.send_button.grid(row=0, column=1, padx=(0, 18), pady=21)
+
+    def show_welcome_message(self):
+        self.add_bot_message("Hello I Am Your Chatbot Ask Me Some Questions", save=False)
+
+    def handle_enter(self, event):
+        if event.state & 0x0001:
+            return
+        self.send_message()
+        return "break"
+
+    def create_new_chat(self):
+        self.chat_counter += 1
+        name = f"New Chat {self.chat_counter}"
+        self.chats[name] = []
+        self.load_chat(name)
+
+    def refresh_sidebar(self, search_text=""):
+        for widget in self.chat_list.winfo_children():
+            widget.destroy()
+
+        search_text = search_text.lower().strip()
+
+        for chat_name in self.chats:
+            if search_text and search_text not in chat_name.lower():
+                continue
+
+            selected = chat_name == self.current_chat
+
+            button = ctk.CTkButton(
+                self.chat_list,
+                text=chat_name,
+                height=46,
+                corner_radius=15,
+                anchor="w",
+                font=("Segoe UI", 14, "bold" if selected else "normal"),
+                fg_color=ACCENT if selected else "transparent",
+                hover_color=ACCENT_HOVER if selected else CARD,
+                text_color=TEXT if selected else MUTED,
+                command=lambda name=chat_name: self.load_chat(name)
+            )
+            button.pack(fill="x", pady=5, padx=6)
+
+    def search_chats(self, event=None):
+        self.refresh_sidebar(self.search_box.get())
+
+    def load_chat(self, chat_name):
+        self.current_chat = chat_name
+        self.title_label.configure(text=chat_name)
+
+        for widget in self.chat_area.winfo_children():
+            widget.destroy()
+
+        if len(self.chats[chat_name]) == 0:
+            self.show_welcome_message()
+
+        for sender, text in self.chats[chat_name]:
+            self.add_message(text, sender, save=False)
+
+        self.refresh_sidebar(self.search_box.get())
+
+    def make_unique_title(self, title):
+        title = title.strip() or "Untitled Chat"
+
+        if len(title) > 32:
+            title = title[:32] + "..."
+
+        base = title
+        number = 2
+
+        while title in self.chats and title != self.current_chat:
+            title = f"{base} ({number})"
+            number += 1
+
+        return title
+
+    def rename_chat_from_first_message(self, message):
+        old_name = self.current_chat
+
+        user_messages = [
+            text for sender, text in self.chats[old_name]
+            if sender == "user"
+        ]
+
+        if len(user_messages) != 1:
+            return
+
+        new_name = self.make_unique_title(message)
+        self.chats[new_name] = self.chats.pop(old_name)
+        self.current_chat = new_name
+
+        self.title_label.configure(text=new_name)
+        self.refresh_sidebar(self.search_box.get())
+
+    def add_message(self, text, sender="bot", save=True):
+        if save:
+            self.chats[self.current_chat].append((sender, text))
+
+        is_user = sender == "user"
+
+        row = ctk.CTkFrame(self.chat_area, fg_color="transparent")
+        row.grid(sticky="ew", padx=18, pady=10)
+        row.grid_columnconfigure(0, weight=1)
+
+        bubble = ctk.CTkFrame(
+            row,
+            corner_radius=24,
+            fg_color=ACCENT if is_user else CARD
+        )
+
+        bubble.grid(
+            row=0,
+            column=0,
+            sticky="e" if is_user else "w",
+            padx=(180, 0) if is_user else (0, 180)
+        )
+
+        name = "You" if is_user else "RAV"
+        name_color = "#DFF1FF" if is_user else ACCENT
+
+        ctk.CTkLabel(
+            bubble,
+            text=name,
+            font=("Segoe UI", 12, "bold"),
+            text_color=name_color
+        ).pack(padx=18, pady=(14, 2), anchor="w")
+
+        ctk.CTkLabel(
+            bubble,
+            text=text,
+            font=("Segoe UI", 15),
+            wraplength=640,
+            justify="left",
+            text_color=TEXT
+        ).pack(padx=18, pady=(2, 8), anchor="w")
+
+        ctk.CTkLabel(
+            bubble,
+            text=datetime.now().strftime("%H:%M"),
+            font=("Segoe UI", 10),
+            text_color="#D4D4D8"
+        ).pack(padx=18, pady=(0, 12), anchor="e")
+
+        self.after(50, self.scroll_to_bottom)
+
+    def add_user_message(self, text):
+        self.add_message(text, "user")
+
+    def add_bot_message(self, text, save=True):
+        self.add_message(text, "bot", save)
+
+    def show_typing_then_reply(self, reply):
+        typing_row = ctk.CTkFrame(self.chat_area, fg_color="transparent")
+        typing_row.grid(sticky="ew", padx=18, pady=10)
+
+        bubble = ctk.CTkFrame(typing_row, corner_radius=24, fg_color=CARD)
+        bubble.grid(row=0, column=0, sticky="w", padx=(0, 180))
+
+        label = ctk.CTkLabel(
+            bubble,
+            text="RAV is typing...",
+            font=("Segoe UI", 14, "italic"),
+            text_color=MUTED
+        )
+        label.pack(padx=18, pady=14)
+
+        self.scroll_to_bottom()
+
+        def replace_typing():
+            typing_row.destroy()
+            self.add_bot_message(reply)
+
+        self.after(600, replace_typing)
+
+    def send_message(self):
+        message = self.entry.get("1.0", "end").strip()
+
+        if message == "":
+            return
+
+        self.entry.delete("1.0", "end")
+
+        self.add_user_message(message)
+        self.rename_chat_from_first_message(message)
+
+        reply = self.generate_response(message)
+        self.show_typing_then_reply(reply)
+
+    def generate_response(self, message):
+        msg = message.lower().strip()
+
+        if "hello" in msg or "hi" in msg:
+            return "Hello! Ask me some questions."
+
+        if "time" in msg:
+            return datetime.now().strftime("It's %I:%M %p.")
+
+        if "date" in msg:
+            return datetime.now().strftime("Today is %A, %B %d, %Y.")
+
+        if "bye" in msg:
+            return "Goodbye!"
+
+        return "Hello I Am Your Chatbot Ask Me Some Questions"
+
+    def scroll_to_bottom(self):
+        self.chat_area._parent_canvas.yview_moveto(1.0)
+
+
+if __name__ == "__main__":
+    app = RAVChatbot()
+    app.mainloop()
