@@ -1,11 +1,14 @@
 {
-  "name": "nemotron-chat-demo",
+  "name": "rav-chat-ui",
   "version": "1.0.0",
   "private": true,
-  "description": "Node.js chatbot demo using OpenRouter and localhost.run",
+  "description": "RAV chat UI with an Express backend using OpenRouter",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

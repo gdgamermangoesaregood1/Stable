@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from datetime import datetime
+import math
 
 ctk.set_appearance_mode("dark")
 
@@ -43,21 +44,19 @@ class RAVChatbot(ctk.CTk):
         self.sidebar.grid(row=0, column=0, rowspan=3, sticky="ns")
         self.sidebar.grid_propagate(False)
 
-        self.logo = ctk.CTkLabel(
+        ctk.CTkLabel(
             self.sidebar,
             text="RAV",
             font=("Segoe UI", 36, "bold"),
             text_color=ACCENT
-        )
-        self.logo.pack(padx=24, pady=(30, 0), anchor="w")
+        ).pack(padx=24, pady=(30, 0), anchor="w")
 
-        self.subtitle = ctk.CTkLabel(
+        ctk.CTkLabel(
             self.sidebar,
             text="AI desktop assistant",
             font=("Segoe UI", 13),
             text_color=MUTED
-        )
-        self.subtitle.pack(padx=26, pady=(2, 24), anchor="w")
+        ).pack(padx=26, pady=(2, 24), anchor="w")
 
         self.new_chat_button = ctk.CTkButton(
             self.sidebar,
@@ -147,7 +146,8 @@ class RAVChatbot(ctk.CTk):
             corner_radius=20,
             border_width=0,
             fg_color=CARD,
-            text_color=TEXT
+            text_color=TEXT,
+            wrap="word"
         )
         self.entry.grid(row=0, column=0, padx=(18, 12), pady=21, sticky="ew")
         self.entry.bind("<Return>", self.handle_enter)
@@ -258,6 +258,19 @@ class RAVChatbot(ctk.CTk):
         self.title_label.configure(text=new_name)
         self.refresh_sidebar(self.search_box.get())
 
+    def estimate_text_height(self, text, width_chars=68):
+        lines = 0
+
+        for paragraph in text.split("\n"):
+            paragraph_length = len(paragraph)
+
+            if paragraph_length == 0:
+                lines += 1
+            else:
+                lines += math.ceil(paragraph_length / width_chars)
+
+        return max(44, lines * 24 + 10)
+
     def add_message(self, text, sender="bot", save=True):
         if save:
             self.chats[self.current_chat].append((sender, text))
@@ -291,14 +304,21 @@ class RAVChatbot(ctk.CTk):
             text_color=name_color
         ).pack(padx=18, pady=(14, 2), anchor="w")
 
-        ctk.CTkLabel(
+        message_height = self.estimate_text_height(text)
+
+        message_box = ctk.CTkTextbox(
             bubble,
-            text=text,
+            width=640,
+            height=message_height,
             font=("Segoe UI", 15),
-            wraplength=640,
-            justify="left",
-            text_color=TEXT
-        ).pack(padx=18, pady=(2, 8), anchor="w")
+            fg_color="transparent",
+            text_color=TEXT,
+            border_width=0,
+            wrap="word"
+        )
+        message_box.insert("1.0", text)
+        message_box.configure(state="disabled")
+        message_box.pack(padx=18, pady=(2, 8), anchor="w")
 
         ctk.CTkLabel(
             bubble,

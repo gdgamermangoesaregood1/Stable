@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: rav-chat-ui
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: nvidia/nemotron-3-nano-30b-a3b:free
+      - key: SITE_TITLE
+        value: RAV
