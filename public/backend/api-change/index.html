@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAV API Key Control</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #09090b;
+        --panel: #18181b;
+        --card: #27272a;
+        --accent: #1e90ff;
+        --accent-hover: #1874cd;
+        --text: #ffffff;
+        --muted: #a1a1aa;
+        --danger: #f87171;
+        --success: #4ade80;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top right, rgba(30, 144, 255, 0.14), transparent 30%),
+          var(--bg);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      .panel {
+        width: min(620px, 100%);
+        background: var(--panel);
+        border: 1px solid #1f1f23;
+        border-radius: 28px;
+        padding: 28px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        border: 1px solid rgba(30, 144, 255, 0.4);
+        border-radius: 999px;
+        padding: 8px 14px;
+        color: #b7ddff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 18px 0 8px;
+        font-size: clamp(2rem, 5vw, 2.8rem);
+        line-height: 1.05;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .current {
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .current strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      form {
+        margin-top: 24px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+
+      input {
+        width: 100%;
+        height: 56px;
+        border: 1px solid #33343a;
+        border-radius: 18px;
+        padding: 0 16px;
+        background: var(--card);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: rgba(30, 144, 255, 0.9);
+        box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.18);
+      }
+
+      .actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      button {
+        height: 52px;
+        padding: 0 20px;
+        border: 0;
+        border-radius: 18px;
+        background: var(--accent);
+        color: var(--text);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-hover);
+      }
+
+      button:disabled {
+        opacity: 0.7;
+        cursor: wait;
+      }
+
+      .status {
+        min-height: 24px;
+        font-size: 0.95rem;
+      }
+
+      .status.success {
+        color: var(--success);
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .note {
+        margin-top: 24px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      code {
+        font-family: Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel">
+      <div class="eyebrow">Backend Controls</div>
+      <h1>API Key Change</h1>
+      <p>Change the OpenRouter API key used by the app at runtime. The startup default still comes from <code>OPENROUTER_API_KEY</code> in the environment.</p>
+
+      <section class="current">
+        <strong>Current key</strong>
+        <div id="currentKey">Loading...</div>
+      </section>
+
+      <form id="apiKeyForm">
+        <label for="apiKeyInput">New API key</label>
+        <input id="apiKeyInput" name="apiKey" type="password" placeholder="Paste a new OpenRouter key" autocomplete="off" required />
+        <div class="actions">
+          <button id="saveButton" type="submit">Save key</button>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </form>
+
+      <div class="note">This route is currently unauthenticated. Anyone who can reach <code>/api/api-change</code> can change the runtime key, so do not leave this exposed on a public app without adding protection.</div>
+    </main>
+
+    <script>
+      const form = document.getElementById('apiKeyForm');
+      const input = document.getElementById('apiKeyInput');
+      const saveButton = document.getElementById('saveButton');
+      const status = document.getElementById('status');
+      const currentKey = document.getElementById('currentKey');
+
+      function setStatus(message, type = '') {
+        status.textContent = message;
+        status.className = `status${type ? ` ${type}` : ''}`;
+      }
+
+      async function loadCurrentState() {
+        setStatus('Loading...');
+
+        try {
+          const response = await fetch('/api/api-change', {
+            headers: {
+              Accept: 'application/json'
+            }
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || 'Failed to load current API key state.');
+          }
+
+          currentKey.textContent = payload.maskedKey;
+          setStatus('Current key loaded.', 'success');
+        } catch (error) {
+          currentKey.textContent = 'Unavailable';
+          setStatus(error.message, 'error');
+        }
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        saveButton.disabled = true;
+        setStatus('Saving...');
+
+        try {
+          const response = await fetch('/api/api-change', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              apiKey: input.value
+            })
+          });
+
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || 'Failed to update API key.');
+          }
+
+          currentKey.textContent = payload.maskedKey;
+          input.value = '';
+          setStatus('API key updated.', 'success');
+        } catch (error) {
+          setStatus(error.message, 'error');
+        } finally {
+          saveButton.disabled = false;
+        }
+      });
+
+      loadCurrentState();
+    </script>
+  </body>
+</html>

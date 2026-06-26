@@ -4,12 +4,39 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 8080;
-const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+let openRouterApiKey = process.env.OPENROUTER_API_KEY || '';
 const openRouterModel = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free';
 let openRouterMaxTokens = Number(process.env.OPENROUTER_MAX_TOKENS || 512);
 const siteTitle = process.env.SITE_TITLE || 'Nemotron Chat Demo';
 const requestTimeoutMs = 25000;
 const adminPagePath = path.join(__dirname, 'public', 'backend', 'maxtokencounts', 'index.html');
+const apiKeyPagePath = path.join(__dirname, 'public', 'backend', 'api-change', 'index.html');
+
+function normalizeApiKey(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function maskApiKey(value) {
+  if (!value) {
+    return '(not set)';
+  }
+
+  if (value.length <= 12) {
+    return `${value.slice(0, 4)}...${value.slice(-2)}`;
+  }
+
+  return `${value.slice(0, 7)}...${value.slice(-6)}`;
+}
 
 function normalizeMaxTokens(value) {
   const parsed = Number(value);
@@ -22,6 +49,7 @@ function normalizeMaxTokens(value) {
 }
 
 openRouterMaxTokens = normalizeMaxTokens(openRouterMaxTokens) || 512;
+openRouterApiKey = normalizeApiKey(openRouterApiKey) || '';
 
 function resolveSiteUrl(req) {
   if (process.env.SITE_URL) {
@@ -49,6 +77,38 @@ app.get('/api/health', (_req, res) => {
 app.get('/api/backend/maxtokencounts', (_req, res) => {
   res.json({
     maxTokens: openRouterMaxTokens
+  });
+});
+
+app.get('/api/api-change', (req, res) => {
+  const wantsJson = req.headers.accept && req.headers.accept.includes('application/json');
+
+  if (wantsJson) {
+    return res.json({
+      hasKey: Boolean(openRouterApiKey),
+      maskedKey: maskApiKey(openRouterApiKey),
+      source: process.env.OPENROUTER_API_KEY ? 'runtime override or environment default' : 'runtime override'
+    });
+  }
+
+  res.sendFile(apiKeyPagePath);
+});
+
+app.post('/api/api-change', (req, res) => {
+  const nextKey = normalizeApiKey(req.body?.apiKey);
+
+  if (nextKey === null) {
+    return res.status(400).json({
+      error: 'apiKey must be a non-empty string.'
+    });
+  }
+
+  openRouterApiKey = nextKey;
+
+  res.json({
+    ok: true,
+    hasKey: true,
+    maskedKey: maskApiKey(openRouterApiKey)
   });
 });
 
